@@ -65,6 +65,7 @@ public class CrowdPartition implements Partition {
 
   private List<ServerEntry> m_CrowdOneLevelList;
   private Pattern m_UIDFilter = Pattern.compile("\\(0.9.2342.19200300.100.1.1=([^\\)]*)\\)");
+  private Pattern m_MailFilter = Pattern.compile("\\(0.9.2342.19200300.100.1.3=([^\\)]*)\\)");
   //AD memberOf Emulation
   private boolean m_emulateADmemberOf = false;
   private boolean m_includeNested = false;
@@ -505,8 +506,25 @@ public class CrowdPartition implements Partition {
         } catch (Exception ex) {
           log.error("findOneLevel()", ex);
         }
+
+        Matcher mailMatcher = m_MailFilter.matcher(filter);
+        List<ServerEntry> filteredEntries;
+        if (mailMatcher.find()) {
+          // Filter result set for users with this email address
+          String mail = mailMatcher.group(1);
+
+          filteredEntries = new ArrayList<ServerEntry>();
+          for (ServerEntry entry : l) {
+            if (entry.get("mail").get().get().toString().equals(mail)) {
+              filteredEntries.add(entry);
+            }
+          }
+        } else {
+          filteredEntries = l;
+        }
+
         return new BaseEntryFilteringCursor(
-            new ListCursor<ServerEntry>(l),
+            new ListCursor<ServerEntry>(filteredEntries),
             ctx
         );
       }
